@@ -7,8 +7,8 @@ To isolate key demographic drivers of heart disease, analyze the correlation bet
 
 ##  Database Schema & Features
 The project processes the `heart_disease_uci.csv` dataset, which includes the following features:
-* **Demographics:** `id`, `age`, `sex`
-* **Clinical Markers:** 
+* **Demographics** *: `id`, `age`, `sex`
+* **Clinical Markers** *:
   * `cp` — Chest pain type (typical angina, asymptomatic, etc.)
   * `trestbps` — Resting blood pressure (mm Hg)
   * `chol` — Serum cholesterol (mg/dl)
@@ -72,9 +72,11 @@ SELECT
     ROUND(SUM(CASE WHEN num > 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) AS disease_rate_pct
 FROM risk_score
 GROUP BY total_risk_score
-ORDER BY total_risk_score;
+ORDER BY total_risk_score; ```
+
+
 ### 2. Cohort Cohere Tracking via Window Functions (05_risk_ranking.sql)
-WITH 
+``` WITH 
 age_groups AS (
  SELECT *,
    CASE WHEN age < 45 THEN 'Under 45'
@@ -112,14 +114,16 @@ SELECT sex, age_group, avg_risk_score, disease_rate_pct,
     LAG(avg_risk_score) OVER (PARTITION BY sex ORDER BY age_group) AS prev_age_group_score,
     ROUND((avg_risk_score - LAG(avg_risk_score) OVER (PARTITION BY sex ORDER BY age_group))::numeric, 1) AS score_increase
 FROM group_stats
-ORDER BY sex, age_group;
----
+ORDER BY sex, age_group; ```
+
 
 ## Tech Stack & Core Concepts Demonstrated
 * **Database Engine:** PostgreSQL
 * **Advanced SQL Mastery:** Complex Common Table Expressions (CTEs), Multi-Layer Aggregations, Relational Data Stratification.
 * **Analytical Window Functions:** `LAG() OVER (PARTITION BY ... ORDER BY ...)` for trend analysis.
 * **Domain Expertise:** Translation of critical clinical variables (ST depression, fasting blood sugar, thallium stress test results) into structured analytical database queries.
+
+
 ##  Key Analytical Insights & Clinical Findings
 
 ### 1. Demographic & Gender Disparities (From `01_sex_age_analysis.sql`)
