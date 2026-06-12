@@ -72,11 +72,13 @@ SELECT
     ROUND(SUM(CASE WHEN num > 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) AS disease_rate_pct
 FROM risk_score
 GROUP BY total_risk_score
-ORDER BY total_risk_score; ```
+ORDER BY total_risk_score;
+```
 
 
 ### 2. Cohort Cohere Tracking via Window Functions (05_risk_ranking.sql)
-``` WITH 
+``` sql
+WITH 
 age_groups AS (
  SELECT *,
    CASE WHEN age < 45 THEN 'Under 45'
@@ -114,7 +116,8 @@ SELECT sex, age_group, avg_risk_score, disease_rate_pct,
     LAG(avg_risk_score) OVER (PARTITION BY sex ORDER BY age_group) AS prev_age_group_score,
     ROUND((avg_risk_score - LAG(avg_risk_score) OVER (PARTITION BY sex ORDER BY age_group))::numeric, 1) AS score_increase
 FROM group_stats
-ORDER BY sex, age_group; ```
+ORDER BY sex, age_group;
+```
 
 
 ## Tech Stack & Core Concepts Demonstrated
