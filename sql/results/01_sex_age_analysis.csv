@@ -1,0 +1,9 @@
+"sex","age_group","total_patients","diseased","disease_rate_pct"
+"Female","45-54",74,12,16.2
+"Female","55-64",59,29,49.2
+"Female","65+",19,4,21.1
+"Female","under 45",42,5,11.9
+"Male","45-54",220,127,57.7
+"Male","55-64",286,211,73.8
+"Male","65+",84,68,81.0
+"Male","under 45",136,53,39.0

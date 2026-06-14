@@ -1,0 +1,3 @@
+"status","avg_max_heartrate","avg_st_depression","typical_angina_pct","asymptomatic_pct","exercise_angina_pct","lv_hypertrophy_pct","st_abnormality_pct","reversable_defect_pct","fixed_defect_pct","avg_vessels_affected"
+"Healthy",148.8,0.41,5.9,25.3,14.1,20.2,13.0,9.7,2.8,0.3
+"Diseased",128.3,1.26,4.0,78.3,59.5,21.5,20.9,32.1,7.4,1.1
