@@ -28,7 +28,9 @@ The analysis is broken down into 5 sequential scripts tracking the analytical li
 2. `02_modifiable_factors.sql` — Aggregation of metabolic markers (cholesterol, blood pressure, fasting blood sugar) relative to diagnosis.
 3. `03_clinical_markers.sql` — Deep-dive diagnostic analysis incorporating ECG patterns, exercise-induced angina, Thallium stress tests, and fluoroscopy (`ca`).
 4. `04_risk_score_cte.sql` — A custom multi-factorial risk scoring engine calculated via population averages using CTEs.
-5. `05_risk_ranking.sql` — Dynamic risk profiling using SQL Window Functions (`LAG`) to analyze step-by-step risk score increases across aging cohorts.
+5. `05_risk_ranking.sql` — Dynamic risk profiling using Window Functions (`DENSE_RANK`, `LAG`) 
+to rank patients by composite risk score within age and sex cohorts, and track risk progression 
+across aging groups.
 ##  Relational Database Architecture
 For this project, the raw dataset was modeled into a relational structure inside PostgreSQL. The analysis evaluates data across key clinical entities:
 * `Demographic Cohorts` — Stratified analysis by `sex` and partitioned `age_groups`.
@@ -76,7 +78,7 @@ ORDER BY total_risk_score;
 ```
 
 
-### 2. Cohort Cohere Tracking via Window Functions (05_risk_ranking.sql)
+### 2. Cohort Trend Tracking via Window Functions (05_risk_ranking.sql)
 ``` sql
 WITH 
 age_groups AS (
