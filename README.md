@@ -131,6 +131,15 @@ ORDER BY sex, age_group;
 
 ##  Key Analytical Insights & Clinical Findings
 
+### 0. Data Quality Assessment
+Prior to analysis, a full data quality check was performed:
+- **No duplicates** found across 920 patient records
+- **Cholesterol**: 202 missing values (22%) coded as 0 → excluded via WHERE chol > 0
+- **Blood pressure**: 60 missing values (6.5%) coded as 0 → excluded via WHERE trestbps > 0
+- **CA (vessels)**: 611 missing (66%) → used as binary indicator (ca > 0)
+- **Thal**: 486 missing (53%) → NULLs excluded naturally by PostgreSQL aggregation
+- **Oldpeak min = -2.6** → clinically valid (ST elevation), retained as-isм
+
 ### 1. Demographic & Gender Disparities (From `01_sex_age_analysis.sql`)
 The Gender Gap: The dataset reveals a significantly higher heart disease prevalence (`disease_rate_pct`) among Male patients compared to Female patients across almost all age groups. 
 Age Aggravation: In both genders, the disease rate escalates sharply after the age of 45, showing that age is a non-modifiable risk factor that exponentially compounds other clinical risks.
