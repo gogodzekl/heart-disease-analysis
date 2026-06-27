@@ -1,47 +1,45 @@
-# Ischemic Heart Disease Risk Factors Analysis (PostgreSQL)
+# Ischemic Heart Disease — Risk Factor Analysis
 
-A comprehensive, database-driven analytical project focused on Ischemic Heart Disease (IHD). Utilizing the public UCI Heart Disease dataset (920 patient records, 16 clinical attributes), this project implements an end-to-end analytical pipeline inside PostgreSQL to extract epidemiological insights, build dynamic risk-scoring metrics, and track risk progression across aging cohorts.
+A data analytics project on the UCI Heart Disease dataset (920 patients, 
+16 clinical attributes), built across two tools: PostgreSQL and Excel. 
+The project covers the full analytical pipeline — from data quality 
+assessment to interactive dashboard and risk scoring.
 
-##  Project Objective
-To isolate key demographic drivers of heart disease, analyze the correlation between clinical biomarkers and positive diagnoses, and design a multi-factorial risk scoring framework to stratify patients.
+## Project Goal
+Identify key demographic and clinical drivers of Ischemic Heart Disease, 
+build a multi-factor risk scoring model, and visualize findings through 
+an interactive Excel dashboard.
 
-##  Database Schema & Features
-The project processes the `heart_disease_uci.csv` dataset, which includes the following features:
-* **Demographics** *: `id`, `age`, `sex`
-* **Clinical Markers** *:
-  * `cp` — Chest pain type (typical angina, asymptomatic, etc.)
-  * `trestbps` — Resting blood pressure (mm Hg)
-  * `chol` — Serum cholesterol (mg/dl)
-  * `fbs` — Fasting blood sugar > 120 mg/dl
-  * `restecg` — Resting electrocardiographic results
-  * `thalch` — Maximum heart rate achieved
-  * `exang` — Exercise-induced angina
-  * `oldpeak` — ST depression induced by exercise relative to rest
-  * `slope` — The slope of the peak exercise ST segment
-  * `ca` — Number of major vessels colored by fluoroscopy
-  * `thal` — Thallium scintigraphy / stress test results
-* **Target Variable:** `num` — Diagnosis of heart disease (0 = healthy, >0 = diseased status)
+## Dataset
+`heart_disease_uci.csv` — public UCI dataset including:
+- **Demographics**: age, sex
+- **Clinical Markers**: cholesterol, blood pressure, ECG results, 
+max heart rate, ST depression, exercise angina, Thallium stress test
+- **Target**: `num` — diagnosis (0 = healthy, >0 = diseased)
 
-## Repository Structure
-The analysis is broken down into 5 sequential scripts tracking the analytical lifecycle:
-1. `01_sex_age_analysis.sql` — Baseline prevalence and disease rate calculations stratified by sex and age cohorts.
-2. `02_modifiable_factors.sql` — Aggregation of metabolic markers (cholesterol, blood pressure, fasting blood sugar) relative to diagnosis.
-3. `03_clinical_markers.sql` — Deep-dive diagnostic analysis incorporating ECG patterns, exercise-induced angina, Thallium stress tests, and fluoroscopy (`ca`).
-4. `04_risk_score_cte.sql` — A custom multi-factorial risk scoring engine calculated via population averages using CTEs.
-5. `05_risk_ranking.sql` — Dynamic risk profiling using Window Functions (`DENSE_RANK`, `LAG`) 
-to rank patients by composite risk score within age and sex cohorts, and track risk progression 
-across aging groups.
-##  Relational Database Architecture
-For this project, the raw dataset was modeled into a relational structure inside PostgreSQL. The analysis evaluates data across key clinical entities:
-* `Demographic Cohorts` — Stratified analysis by `sex` and partitioned `age_groups`.
-* `Metabolic Profiles` — Combined evaluation of blood pressure (`trestbps`), serum cholesterol (`chol`), and fasting blood sugar (`fbs`).
-* `Diagnostic Markers` — Electrocardiographic results (`restecg`), ST-depression metrics (`oldpeak`), and Thallium stress test outputs (`thal`).
+---
 
-##  Highlighted SQL Architecture
+## Part 1 — SQL Analysis (PostgreSQL)
 
-### 1. Multi-Factor Risk Stratification Engine (`04_risk_score_cte.sql`)
-This script uses a `CROSS JOIN` against dynamically calculated baseline population averages to assign a custom risk score (0 to 6) for each patient, evaluating the exact correlation between cumulative risk factors and final disease rates.
+### Repository Structure
+1. `01_sex_age_analysis.sql` — Disease rate by sex and age group
+2. `02_modifiable_factors.sql` — Cholesterol, BP, fasting blood sugar vs diagnosis
+3. `03_clinical_markers.sql` — ECG patterns, exercise angina, Thallium stress test, fluoroscopy
+4. `04_risk_score_cte.sql` — Multi-factor risk scoring engine using CTEs
+5. `05_risk_ranking.sql` — Risk progression across age cohorts using Window Functions
 
+### Key SQL Concepts Demonstrated
+- **CTEs** — multi-layer Common Table Expressions for population averages 
+and risk score calculation
+- **CROSS JOIN** — dynamic baseline comparison against population averages
+- **Window Functions** — `LAG() OVER (PARTITION BY sex ORDER BY age_group)` 
+for tracking risk progression across aging cohorts
+- **DENSE_RANK()** — patient ranking within demographic segments
+- **Conditional Aggregation** — `CASE WHEN` inside `SUM()` for disease 
+rate calculations
+- **Data Quality** — handling missing values coded as 0 via `WHERE chol > 0`
+
+### Highlighted Query — Risk Scoring Engine (`04_risk_score_cte.sql`)
 ```sql
 WITH population_avg AS (
    SELECT 
@@ -71,84 +69,44 @@ SELECT
     total_risk_score,
     COUNT(*) AS total_patients, 
     SUM(CASE WHEN num > 0 THEN 1 ELSE 0 END) AS diseased,
-    ROUND(SUM(CASE WHEN num > 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) AS disease_rate_pct
+    ROUND(SUM(CASE WHEN num > 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) 
+    AS disease_rate_pct
 FROM risk_score
 GROUP BY total_risk_score
 ORDER BY total_risk_score;
 ```
 
+---
 
-### 2. Cohort Trend Tracking via Window Functions (05_risk_ranking.sql)
-``` sql
-WITH 
-age_groups AS (
- SELECT *,
-   CASE WHEN age < 45 THEN 'Under 45'
-   WHEN age BETWEEN 45 AND 54 THEN '45-54'
-   WHEN age BETWEEN 55 AND 64 THEN '55-64'
-   ELSE '65+' END AS age_group
-  FROM heart
-  WHERE chol > 0 AND trestbps > 0),
-population_avg AS (
-  SELECT 
-      AVG(chol) AS avg_chol,
-      AVG(trestbps) AS avg_bp,
-      AVG(oldpeak) AS avg_st
-    FROM heart
-    WHERE chol > 0 AND trestbps > 0),
-risk_score AS (
-  SELECT a.sex, a.age_group, a.num,
-       (CASE WHEN a.chol > p.avg_chol THEN 1 ELSE 0 END +
-        CASE WHEN a.trestbps > p.avg_bp THEN 1 ELSE 0 END +
-        CASE WHEN a.oldpeak > p.avg_st THEN 1 ELSE 0 END +
-        CASE WHEN a.exang = 'TRUE' THEN 1 ELSE 0 END +
-        CASE WHEN a.fbs = 'TRUE' THEN 1 ELSE 0 END +
-        CASE WHEN a.ca > 0 THEN 1 ELSE 0 END) 
-		AS total_risk_score
-    FROM age_groups a
-    CROSS JOIN population_avg p),
-group_stats AS (
-  SELECT sex, age_group, 
-    ROUND(AVG(total_risk_score)::numeric, 1) AS avg_risk_score,
-    ROUND(SUM(CASE WHEN num > 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) AS disease_rate_pct
-  FROM risk_score
-  GROUP BY sex, age_group
-)
-SELECT sex, age_group, avg_risk_score, disease_rate_pct,
-    LAG(avg_risk_score) OVER (PARTITION BY sex ORDER BY age_group) AS prev_age_group_score,
-    ROUND((avg_risk_score - LAG(avg_risk_score) OVER (PARTITION BY sex ORDER BY age_group))::numeric, 1) AS score_increase
-FROM group_stats
-ORDER BY sex, age_group;
-```
+## Part 2 — Excel Dashboard & Analysis
 
+### Workbook Structure
+- **Raw Data** — Source data as structured Excel Table (HeartData)
+- **Data Quality** — Dynamic missing value assessment using COUNTIF, COUNTBLANK
+- **Analysis** — Risk Score per patient replicating SQL logic via IF, AVERAGEIFS
+- **Pivot Tables** — Disease rate by Risk Score, Age/Sex breakdown, Chest Pain Type
+- **Dashboard** — Interactive charts, KPI cards, and Slicers
+- **Patient Lookup** — VLOOKUP-based patient search with conditional formatting
+- **Summary Stats** — Clinical indicators by sex and diagnosis using AVERAGEIFS, COUNTIFS
 
-## Tech Stack & Core Concepts Demonstrated
-* **Database Engine:** PostgreSQL
-* **Advanced SQL Mastery:** Complex Common Table Expressions (CTEs), Multi-Layer Aggregations, Relational Data Stratification.
-* **Analytical Window Functions:** `LAG() OVER (PARTITION BY ... ORDER BY ...)` for trend analysis.
-* **Domain Expertise:** Translation of critical clinical variables (ST depression, fasting blood sugar, thallium stress test results) into structured analytical database queries.
+### Key Excel Skills Demonstrated
+- **Power Query** — data transformation and cleaning pipeline
+- **VLOOKUP, IFERROR** — interactive patient lookup tool
+- **AVERAGEIFS, COUNTIFS** — multi-condition clinical aggregations
+- **Pivot Tables + Slicers** — interactive filtering across all charts
+- **Conditional Formatting** — risk level visualization (green/yellow/red)
+- **Dashboard design** — KPI cards, grouped charts, key findings panel
 
+---
 
-##  Key Analytical Insights & Clinical Findings
+## Key Findings
+- Males show ~2.4x higher disease rate than females across all age groups
+- Disease rate reaches 100% at Risk Score 6 — patients with 3+ risk 
+factors fall into extreme-risk tier
+- 79% of asymptomatic patients are diagnosed with heart disease — 
+highlighting the danger of silent ischemia
+- Max heart rate and ST depression (oldpeak) are the strongest 
+clinical markers of IHD
 
-### 0. Data Quality Assessment
-Prior to analysis, a full data quality check was performed:
-- **No duplicates** found across 920 patient records
-- **Cholesterol**: 202 missing values (22%) coded as 0 → excluded via WHERE chol > 0
-- **Blood pressure**: 60 missing values (6.5%) coded as 0 → excluded via WHERE trestbps > 0
-- **CA (vessels)**: 611 missing (66%) → used as binary indicator (ca > 0)
-- **Thal**: 486 missing (53%) → NULLs excluded naturally by PostgreSQL aggregation
-- **Oldpeak min = -2.6** → clinically valid (ST elevation), retained as-isм
-
-### 1. Demographic & Gender Disparities (From `01_sex_age_analysis.sql`)
-The Gender Gap: The dataset reveals a significantly higher heart disease prevalence (`disease_rate_pct`) among Male patients compared to Female patients across almost all age groups. 
-Age Aggravation: In both genders, the disease rate escalates sharply after the age of 45, showing that age is a non-modifiable risk factor that exponentially compounds other clinical risks.
-
-### 2. The Metabolic Triad (From `02_modifiable_factors.sql` & `03_clinical_markers.sql`)
-Cholesterol & BP Shifts: The `Diseased` cohort exhibits noticeably higher average serum cholesterol (`avg_cholesterol`) and resting blood pressure (`avg_blood_pressure`) compared to the `Healthy` group.
-Asymptomatic Danger: A massive percentage of patients diagnosed with heart disease presented as asymptomatic (`asymptomatic_pct`) regarding chest pain type (`cp`). This highlights the critical clinical danger of "silent" ischemia and underscores why routine screenings (like ECG and Thallium stress tests) are vital.
-Ischemia Markers: Exercise-induced angina (`exercise_angina_pct`) and significant ST depression (`avg_st_depression`) showed a powerful positive correlation with a confirmed heart disease diagnosis (`num > 0`).
-
-### 3. Cumulative Risk Dynamics (From `04_risk_score_cte.sql` & `05_risk_ranking.sql`)
-The Tipping Point: The custom risk scoring engine clearly demonstrates that as the `total_risk_score` moves from 0 toward 6, the `disease_rate_pct` approaches nearly 100%. Patients with 3 or more co-existing risk factors fall into an extreme-risk tier.
-Risk Progression Velocity (`score_increase`): Using the `LAG()` function to track shifts between age cohorts showed that the average risk score doesn't just grow linearly; it spikes during the transition into the 55-64 and 65+ brackets, with men experiencing an earlier onset of high composite risk scores than women.
+## Tech Stack
+PostgreSQL · Microsoft Excel 
